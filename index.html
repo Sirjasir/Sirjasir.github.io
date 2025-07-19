@@ -6,69 +6,109 @@
   <title>VTQ Medical – Sanitätsdienst</title>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --vtq-blue: #015b77;
+      --vtq-turquoise: #1ea9a4;
+      --vtq-light: #f0f8f9;
+    }
+
     body {
       margin: 0;
       font-family: 'Roboto', sans-serif;
-      line-height: 1.6;
+      background-color: var(--vtq-light);
       scroll-behavior: smooth;
     }
+
     header {
-      background: #005a87;
+      background: linear-gradient(135deg, var(--vtq-blue), var(--vtq-turquoise));
       color: white;
-      padding: 60px 20px;
       text-align: center;
+      padding: 60px 20px;
     }
+
+    header img {
+      width: 120px;
+      margin-bottom: 20px;
+    }
+
     nav {
-      background: #033f5f;
+      background: var(--vtq-blue);
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 25px;
       padding: 15px 0;
     }
+
     nav a {
       color: white;
       text-decoration: none;
       font-weight: bold;
+      transition: opacity 0.3s;
     }
+
+    nav a:hover {
+      opacity: 0.7;
+    }
+
     section {
       padding: 60px 20px;
       max-width: 900px;
       margin: auto;
     }
+
     h1, h2 {
-      color: #005a87;
+      color: var(--vtq-blue);
     }
+
     .services {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 20px;
     }
+
     .card {
-      background: #f4f4f4;
+      background: white;
+      border-left: 5px solid var(--vtq-turquoise);
       padding: 20px;
       border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
+
     footer {
-      background: #033f5f;
+      background: var(--vtq-blue);
       color: white;
       text-align: center;
       padding: 30px 20px;
     }
+
     .btn {
       display: inline-block;
-      background: #007cb8;
+      background: var(--vtq-turquoise);
       color: white;
       padding: 12px 20px;
       margin-top: 20px;
       border-radius: 5px;
       text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    .btn:hover {
+      background: #14948d;
+    }
+
+    @media(max-width: 600px) {
+      header img {
+        width: 90px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Hero / Header -->
+  <!-- Header -->
   <header>
+    <img src="images/logo-vtq.png" alt="VTQ Medical Logo" />
     <h1>VTQ Medical</h1>
     <p>Professioneller Sanitätsdienst für Veranstaltungen, Unternehmen & öffentliche Einrichtungen</p>
     <a href="#kontakt" class="btn">Jetzt Anfragen</a>
