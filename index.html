@@ -1,12 +1,131 @@
-<DOCTYPE html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VTQ Medical – Sanitätsdienst</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
+    header {
+      background: #005a87;
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    nav {
+      background: #033f5f;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 15px 0;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    section {
+      padding: 60px 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    h1, h2 {
+      color: #005a87;
+    }
+    .services {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #f4f4f4;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    footer {
+      background: #033f5f;
+      color: white;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    .btn {
+      display: inline-block;
+      background: #007cb8;
+      color: white;
+      padding: 12px 20px;
+      margin-top: 20px;
+      border-radius: 5px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
 
-<html>
-  <head>
-    <title>Startseite</title>
-  </head>
-  <body>
-    <div><a1>Herzlich Willkommen!</a1></div>
-    <div>Diese Seite wird gerade Überarbeitet.</div>
-    <div>Bitte besuchen Sie uns später noch einmal.</div>
-  </body>
+  <!-- Hero / Header -->
+  <header>
+    <h1>VTQ Medical</h1>
+    <p>Professioneller Sanitätsdienst für Veranstaltungen, Unternehmen & öffentliche Einrichtungen</p>
+    <a href="#kontakt" class="btn">Jetzt Anfragen</a>
+  </header>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="#ueber-uns">Über uns</a>
+    <a href="#leistungen">Leistungen</a>
+    <a href="#team">Team</a>
+    <a href="#kontakt">Kontakt</a>
+  </nav>
+
+  <!-- Über Uns -->
+  <section id="ueber-uns">
+    <h2>Über VTQ Medical</h2>
+    <p>VTQ Medical ist Ihr zuverlässiger Partner im Bereich Sanitätsdienst. Seit über 10 Jahren bieten wir professionelle medizinische Betreuung auf Events, Baustellen und in Betrieben. Unsere qualifizierten Einsatzkräfte sorgen für schnelle Hilfe im Ernstfall – kompetent, diskret und freundlich.</p>
+  </section>
+
+  <!-- Leistungen -->
+  <section id="leistungen">
+    <h2>Unsere Leistungen</h2>
+    <div class="services">
+      <div class="card">
+        <h3>Sanitätsdienst für Events</h3>
+        <p>Medizinische Absicherung bei Konzerten, Sportveranstaltungen und Firmenfeiern.</p>
+      </div>
+      <div class="card">
+        <h3>Betrieblicher Sanitätsdienst</h3>
+        <p>Erste Hilfe, Notfallmanagement und medizinische Versorgung in Ihrem Unternehmen.</p>
+      </div>
+      <div class="card">
+        <h3>Erste-Hilfe-Schulungen</h3>
+        <p>Regelmäßige Schulungen für Mitarbeiter, Schulen und Vereine – praxisnah & zertifiziert.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section id="team">
+    <h2>Unser Team</h2>
+    <p>Unser Team besteht aus erfahrenen Sanitätern, Rettungssanitätern und Notfallsanitätern mit umfangreicher Ausbildung und Einsatzpraxis.</p>
+  </section>
+
+  <!-- Kontakt -->
+  <section id="kontakt">
+    <h2>Kontakt</h2>
+    <p>Sie möchten uns für Ihre Veranstaltung oder Ihr Unternehmen buchen? Schreiben Sie uns!</p>
+    <p><strong>E-Mail:</strong> kontakt@vtq-medical.de<br>
+    <strong>Telefon:</strong> +49 123 456 7890</p>
+    <a href="mailto:kontakt@vtq-medical.de" class="btn">E-Mail senden</a>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2025 VTQ Medical – Sanitätsdienst</p>
+  </footer>
+
+</body>
 </html>
