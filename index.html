@@ -6,18 +6,15 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Firebase (modular SDK für Firestore) -->
-  <!-- Es ist wichtig, das `type="module"` Attribut hinzuzufügen, um Importe zu verwenden. -->
-  <!-- Verwende die neueste stabile Version (z.B. 10.x.x) -->
+  <!-- Firebase modular SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-    // === Deine Firebase Config ===
+    // === Firebase Config ===
     const firebaseConfig = {
       apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
       authDomain: "ffnfeedback.firebaseapp.com",
-      // databaseURL ist für die Realtime Database und wird für Firestore nicht benötigt
       projectId: "ffnfeedback",
       storageBucket: "ffnfeedback.appspot.com",
       messagingSenderId: "469095529693",
@@ -27,97 +24,119 @@
 
     // === Firebase starten ===
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app); // Firestore initialisieren
+    const db = getFirestore(app);
 
-    async function saveFeedback() { // Funktion asynchron machen
+    // === Übungen automatisch aus Firestore laden ===
+    function loadExercises() {
+      const q = query(collection(db, "exercises"), orderBy("createdAt", "asc"));
+      onSnapshot(q, (snapshot) => {
+        const select = document.getElementById("exercise");
+        select.innerHTML = ""; // Leeren
+
+        // Standardoption
+        const defaultOpt = document.createElement("option");
+        defaultOpt.value = "Allgemein";
+        defaultOpt.textContent = "Allgemein";
+        select.appendChild(defaultOpt);
+
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const opt = document.createElement("option");
+          opt.value = data.name;
+          opt.textContent = data.name;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", loadExercises);
+
+    // === Feedback speichern ===
+    async function saveFeedback() {
       const rating = document.getElementById('rating').value;
       const comment = document.getElementById('comment').value.trim();
+      const exercise = document.getElementById('exercise').value;
 
       if (!rating) return alert("Bitte eine Bewertung auswählen!");
 
       try {
-        await addDoc(collection(db, "feedbacks"), { // Daten zu einer "feedbacks"-Sammlung hinzufügen
+        await addDoc(collection(db, "feedbacks"), {
           rating: Number(rating),
           comment: comment,
-          exercise: document.getElementById('exercise').value
-          timestamp: new Date().toISOString() // Oder lieber: firebase.firestore.Timestamp.fromDate(new Date()) für Firestore-typische Zeitstempel
+          exercise: exercise,
+          timestamp: new Date().toISOString()
         });
         document.getElementById('comment').value = '';
         alert("Danke für dein Feedback!");
       } catch (e) {
-        console.error("Fehler beim Hinzufügen des Dokuments: ", e);
-        alert("Es gab einen Fehler beim Speichern deines Feedbacks.");
+        console.error("Fehler beim Hinzufügen des Feedbacks: ", e);
+        alert("Fehler beim Speichern deines Feedbacks!");
       }
     }
 
-    // === Feedback live laden ===
-    // Eine Abfrage für die "feedbacks"-Sammlung erstellen, nach Zeitstempel sortiert
-    const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
-
-    // onSnapshot hört in Echtzeit auf Änderungen in der Sammlung
-    onSnapshot(q, (snapshot) => {
-      const feedbacks = [];
-      snapshot.forEach((doc) => {
-        // Für jedes Dokument die Daten abrufen
-        feedbacks.push(doc.data());
-      });
-      updateChart(feedbacks);
-    }, (error) => {
-      console.error("Fehler beim Abhören von Dokumenten: ", error);
-    });
-
-    // Diese Funktionen müssen global verfügbar sein, wenn sie direkt aus dem HTML aufgerufen werden.
-    // Eine Möglichkeit ist, sie ans Window-Objekt zu hängen.
     window.saveFeedback = saveFeedback;
-    window.updateChart = updateChart; // Wenn auch diese direkt aus HTML aufgerufen würde, hier nicht der Fall
-
-    function updateChart(feedbacks) {
-      const counts = [0,0,0,0,0];
-      feedbacks.forEach(f => counts[f.rating - 1]++);
-
-      const ctx = document.getElementById('feedbackChart').getContext('2d');
-      if (window.chartInstance) window.chartInstance.destroy();
-      window.chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['1', '2', '3', '4', '5'],
-          datasets: [{
-            label: 'Bewertungen',
-            data: counts,
-            backgroundColor: '#b30000'
-          }]
-        },
-        options: { scales: { y: { beginAtZero: true } } }
-      });
-
-      const list = document.getElementById('commentsList');
-      list.innerHTML = feedbacks
-        .filter(f => f.comment)
-        .map(f => `<li>${f.comment}</li>`)
-        .join('');
-    }
   </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f7f7f7;
+    }
+    h1 {
+      color: #b30000;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: auto;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    textarea, select, input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 20px;
+      background: #b30000;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #e00000;
+    }
+    #chartContainer {
+      margin-top: 40px;
+    }
+  </style>
 </head>
+
 <body>
   <div class="card">
     <h1>🧯 Feuerwehr Feedback</h1>
     <p>Hier kannst du anonym Feedback zu Übungen geben. Keine Namen, kein Login – nur ehrliche Rückmeldung.</p>
 
-    <label for="rating">Bewertung (1 = schlecht, 5 = super):</label>
     <label for="exercise">Übung:</label>
-    <select id="exercise">
-      <option value="Allgemein">Allgemein</option>
-      <option value="Atemschutzübung">Atemschutzübung</option>
-      <option value="Verkehrsunfall">Verkehrsunfall</option>
-      <option value="THL-Einsatz">THL-Einsatz</option>
-      <option value="Brandübung">Brandübung</option>
-      <option value="Funkübung">Funkübung</option>
-      <option value="Sonstiges">Sonstiges</option>
-    </select>
+    <select id="exercise"></select>
 
+    <label for="rating">Bewertung (1 = schlecht, 5 = super):</label>
     <select id="rating">
-      <option value="1">1</option><option value="2">2</option>
-      <option value="3">3</option><option value="4">4</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
       <option value="5">5</option>
     </select>
 
@@ -126,16 +145,6 @@
 
     <button onclick="saveFeedback()">Absenden</button>
   </div>
-
-  <div class="card" id="chartContainer">
-    <h2>📊 Auswertung</h2>
-    <canvas id="feedbackChart"></canvas>
-    <ul id="commentsList"></ul>
-  </div>
 </body>
 </html>
 
-
-  <script src="script.js"></script>
-</body>
-</html>
