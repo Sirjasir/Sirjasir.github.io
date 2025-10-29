@@ -106,6 +106,45 @@
     }
     window.addExercise = addExercise;
     window.deleteExercise = deleteExercise;
+    window.addEventListener('DOMContentLoaded', () => {
+      const entered = prompt("PIN eingeben:");
+      if (entered === PIN) {
+        document.getElementById("content").style.display = "block";
+        loadExercises(); // 👈 neu
+        loadFeedback();
+      } else {
+        alert("Falsche PIN – Zugriff verweigert.");
+      }
+    });
+
+
+    function loadExercises() {
+      const select = document.getElementById("exerciseFilter");
+      if (!select) return;
+    
+      const ref = collection(db, "exercises");
+      // kein orderBy – Firestore pusht alle Änderungen automatisch
+      onSnapshot(ref, (snapshot) => {
+        select.innerHTML = "";
+        const names = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data?.name) names.push(data.name);
+        });
+        names.sort((a, b) => a.localeCompare(b, "de"));
+        names.forEach(n => {
+          const opt = document.createElement("option");
+          opt.value = n;
+          opt.textContent = n;
+          select.appendChild(opt);
+        });
+        console.log("[Sync] Übungen aktualisiert:", names);
+        applyFilter(); // damit das Chart neu rendert
+      }, (err) => {
+        console.error("[Sync] Fehler beim Abrufen der Übungen:", err);
+      });
+    }
+
 
 
     // === Filter anwenden ===
