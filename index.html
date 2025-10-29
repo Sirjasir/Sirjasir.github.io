@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Feuerwehr Feedback</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="card">
+    <h1>🧯 Feuerwehr Feedback</h1>
+    <p>Hier kannst du anonym Feedback zu Übungen geben. Keine Namen, kein Login – nur ehrliche Rückmeldung.</p>
+
+    <label for="rating">Bewertung (1 = schlecht, 5 = super):</label>
+    <select id="rating">
+      <option value="1">1</option><option value="2">2</option>
+      <option value="3">3</option><option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+
+    <label for="comment">Kommentar (optional):</label>
+    <textarea id="comment" rows="3" placeholder="Was war gut, was kann besser werden?"></textarea>
+
+    <button onclick="saveFeedback()">Absenden</button>
+  </div>
+
+  <div class="card" id="chartContainer">
+    <h2>📊 Auswertung</h2>
+    <canvas id="feedbackChart"></canvas>
+    <ul id="commentsList"></ul>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
