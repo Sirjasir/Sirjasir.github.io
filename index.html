@@ -39,6 +39,7 @@
         await addDoc(collection(db, "feedbacks"), { // Daten zu einer "feedbacks"-Sammlung hinzufügen
           rating: Number(rating),
           comment: comment,
+          exercise: document.getElementById('exercise').value
           timestamp: new Date().toISOString() // Oder lieber: firebase.firestore.Timestamp.fromDate(new Date()) für Firestore-typische Zeitstempel
         });
         document.getElementById('comment').value = '';
