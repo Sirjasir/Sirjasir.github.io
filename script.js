@@ -2,14 +2,15 @@
 const firebaseConfig = {
   apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
   authDomain: "ffnfeedback.firebaseapp.com",
+  databaseURL: "https://ffnfeedback-default-rtdb.europe-west1.firebasedatabase.app", // 👈 wichtig
   projectId: "ffnfeedback",
-  storageBucket: "ffnfeedback.firebasestorage.app",
+  storageBucket: "ffnfeedback.appspot.com",
   messagingSenderId: "469095529693",
-  appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34"
+  appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34",
   measurementId: "G-CDDM310YEW"
 };
 
-// === Firebase initialisieren ===
+// === Initialisierung ===
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
