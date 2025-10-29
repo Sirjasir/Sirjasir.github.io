@@ -61,16 +61,34 @@
       });
     }
 
-    function addExercise() {
+    async function addExercise() {
       const newEx = prompt("Neue Übung hinzufügen:");
-      if (newEx && !Array.from(document.getElementById("exerciseFilter").options).some(o => o.value === newEx)) {
-        const opt = document.createElement("option");
-        opt.value = newEx;
-        opt.textContent = newEx;
-        document.getElementById("exerciseFilter").appendChild(opt);
+      if (newEx && newEx.trim() !== "") {
+        const select = document.getElementById("exerciseFilter");
+        const exists = Array.from(select.options).some(o => o.value === newEx);
+        if (!exists) {
+          // Lokale Anzeige
+          const opt = document.createElement("option");
+          opt.value = newEx;
+          opt.textContent = newEx;
+          select.appendChild(opt);
+    
+          // 🔥 In Firestore speichern (Sammlung 'exercises')
+          try {
+            await addDoc(collection(db, "exercises"), {
+              name: newEx,
+              createdAt: new Date().toISOString()
+            });
+            alert(`Übung "${newEx}" wurde gespeichert.`);
+          } catch (e) {
+            console.error("Fehler beim Speichern der Übung:", e);
+            alert("Fehler beim Speichern der neuen Übung!");
+          }
+        }
       }
     }
     window.addExercise = addExercise;
+
 
     // === Filter anwenden ===
     function applyFilter() {
