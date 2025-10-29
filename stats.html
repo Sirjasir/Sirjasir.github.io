@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Feuerwehr Feedback – Auswertung</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    // === Deine Firebase Config ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
+      authDomain: "ffnfeedback.firebaseapp.com",
+      projectId: "ffnfeedback",
+      storageBucket: "ffnfeedback.appspot.com",
+      messagingSenderId: "469095529693",
+      appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34",
+      measurementId: "G-CDDM310YEW"
+    };
+
+    // === Firebase starten ===
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // === Zugriffsschutz ===
+    const PIN = "112"; // 🔒 PIN ändern, wenn du willst
+
+    function checkPIN() {
+      const entered = prompt("PIN eingeben:");
+      if (entered === PIN) {
+        document.getElementById("content").style.display = "block";
+        loadFeedback();
+      } else {
+        alert("Falsche PIN – Zugriff verweigert.");
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', checkPIN);
+
+    // === Feedback live laden ===
+    function loadFeedback() {
+      const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
+      onSnapshot(q, (snapshot) => {
+        const feedbacks = [];
+        snapshot.forEach(doc => feedbacks.push(doc.data()));
+        updateChart(feedbacks);
+      });
+    }
+
+    // === Diagramm & Statistiken aktualisieren ===
+    function updateChart(feedbacks) {
+      const counts = [0,0,0,0,0];
+      let total = 0;
+      feedbacks.forEach(f => {
+        counts[f.rating - 1]++;
+        total += f.rating;
+      });
+
+      const avg = feedbacks.length ? (total / feedbacks.length).toFixed(2) : "-";
+      document.getElementById('avgRating').textContent = avg;
+
+      const ctx = document.getElementById('feedbackChart').getContext('2d');
+      if (window.chartInstance) window.chartInstance.destroy();
+      window.chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['1', '2', '3', '4', '5'],
+          datasets: [{
+            label: 'Bewertungen',
+            data: counts,
+            backgroundColor: '#b30000'
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+
+      const list = document.getElementById('commentsList');
+      list.innerHTML = feedbacks
+        .filter(f => f.comment)
+        .map(f => `<li>${f.comment}</li>`)
+        .join('');
+    }
+  </script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 700px; margin: auto; }
+    h1, h2 { color: #b30000; }
+    #content { display: none; }
+    #avgRating { font-size: 1.4em; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+  <div id="content">
+    <div class="card">
+      <h1>📊 Feuerwehr Feedback – Auswertung</h1>
+      <p>Durchschnittsbewertung: <span id="avgRating">-</span></p>
+      <canvas id="feedbackChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>💬 Kommentare</h2>
+      <ul id="commentsList"></ul>
+    </div>
+  </div>
+</body>
+</html>
