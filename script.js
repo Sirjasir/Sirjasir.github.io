@@ -1,12 +1,12 @@
 // === Firebase Config ===
 const firebaseConfig = {
-  apiKey: "DEIN_API_KEY",
-  authDomain: "feuerwehr-feedback.firebaseapp.com",
-  databaseURL: "https://feuerwehr-feedback-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "feuerwehr-feedback",
-  storageBucket: "feuerwehr-feedback.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef123456"
+  apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
+  authDomain: "ffnfeedback.firebaseapp.com",
+  projectId: "ffnfeedback",
+  storageBucket: "ffnfeedback.firebasestorage.app",
+  messagingSenderId: "469095529693",
+  appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34"
+  measurementId: "G-CDDM310YEW"
 };
 
 // === Firebase initialisieren ===
