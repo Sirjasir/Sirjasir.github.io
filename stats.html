@@ -8,7 +8,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     // === Deine Firebase Config ===
     const firebaseConfig = {
@@ -21,14 +21,13 @@
       measurementId: "G-CDDM310YEW"
     };
 
-    // === Firebase starten ===
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     // === Zugriffsschutz ===
-    const PIN = "112"; // 🔒 PIN ändern, wenn du willst
+    const PIN = "112";
 
-    function checkPIN() {
+    window.addEventListener('DOMContentLoaded', () => {
       const entered = prompt("PIN eingeben:");
       if (entered === PIN) {
         document.getElementById("content").style.display = "block";
@@ -36,9 +35,7 @@
       } else {
         alert("Falsche PIN – Zugriff verweigert.");
       }
-    }
-
-    window.addEventListener('DOMContentLoaded', checkPIN);
+    });
 
     // === Feedback live laden ===
     function loadFeedback() {
@@ -47,6 +44,7 @@
         const feedbacks = [];
         snapshot.forEach(doc => feedbacks.push(doc.data()));
         updateChart(feedbacks);
+        window.currentFeedbacks = feedbacks; // für Export verfügbar machen
       });
     }
 
@@ -83,6 +81,33 @@
         .map(f => `<li>${f.comment}</li>`)
         .join('');
     }
+
+    // === CSV-Exportfunktion ===
+    async function exportCSV() {
+      const feedbacks = window.currentFeedbacks || [];
+      if (!feedbacks.length) return alert("Keine Daten zum Exportieren.");
+
+      // CSV-Header
+      let csv = "Bewertung,Kommentar,Zeitstempel\n";
+      feedbacks.forEach(f => {
+        const rating = f.rating ?? "";
+        const comment = (f.comment || "").replace(/[\r\n,]/g, " ");
+        const ts = f.timestamp ?? "";
+        csv += `${rating},"${comment}",${ts}\n`;
+      });
+
+      // Download erzeugen
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `feedback_export_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Button-Funktion global machen
+    window.exportCSV = exportCSV;
   </script>
 
   <style>
@@ -91,6 +116,11 @@
     h1, h2 { color: #b30000; }
     #content { display: none; }
     #avgRating { font-size: 1.4em; font-weight: bold; }
+    #exportBtn {
+      background: #b30000; color: white; border: none; padding: 8px 14px;
+      border-radius: 6px; cursor: pointer; margin-bottom: 10px;
+    }
+    #exportBtn:hover { background: #e00000; }
   </style>
 </head>
 
@@ -99,6 +129,7 @@
     <div class="card">
       <h1>📊 Feuerwehr Feedback – Auswertung</h1>
       <p>Durchschnittsbewertung: <span id="avgRating">-</span></p>
+      <button id="exportBtn" onclick="exportCSV()">💾 CSV exportieren</button>
       <canvas id="feedbackChart"></canvas>
     </div>
 
@@ -109,3 +140,4 @@
   </div>
 </body>
 </html>
+
