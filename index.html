@@ -4,12 +4,11 @@
   <meta charset="UTF-8">
   <title>Feuerwehr Feedback</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Firebase modular SDK -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     // === Firebase Config ===
     const firebaseConfig = {
@@ -26,26 +25,44 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // === Übungen automatisch aus Firestore laden ===
+    // === Live alle Übungen aus Firestore laden ===
     function loadExercises() {
-      const q = query(collection(db, "exercises"), orderBy("createdAt", "asc"));
-      onSnapshot(q, (snapshot) => {
-        const select = document.getElementById("exercise");
-        select.innerHTML = ""; // Leeren
+      const select = document.getElementById("exercise");
+      if (!select) return;
 
-        // Standardoption
-        const defaultOpt = document.createElement("option");
-        defaultOpt.value = "Allgemein";
-        defaultOpt.textContent = "Allgemein";
-        select.appendChild(defaultOpt);
-
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-       //   const opt = document.createElement("option");
-       //   opt.value = data.name;
-       //   opt.textContent = data.name;
-       //   select.appendChild(opt);
+      const ref = collection(db, "exercises");
+      onSnapshot(ref, (snapshot) => {
+        const names = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data?.name) names.push(data.name);
         });
+
+        names.sort((a, b) => a.localeCompare(b, "de"));
+        select.innerHTML = ""; // Dropdown leeren
+        if (names.length === 0) {
+          // Fallback, falls noch keine Übung existiert
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "Keine Übung verfügbar";
+          select.appendChild(opt);
+          select.disabled = true;
+        } else {
+          select.disabled = false;
+          names.forEach(n => {
+            const opt = document.createElement("option");
+            opt.value = n;
+            opt.textContent = n;
+            select.appendChild(opt);
+          });
+        }
+        console.log("[LiveSync] Übungen:", names);
+      }, (err) => {
+        console.error("[LiveSync] Fehler beim Laden der Übungen:", err);
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Fehler beim Laden";
+        select.appendChild(opt);
       });
     }
 
@@ -55,8 +72,13 @@
     async function saveFeedback() {
       const rating = document.getElementById('rating').value;
       const comment = document.getElementById('comment').value.trim();
-      const exercise = document.getElementById('exercise').value;
+      const exerciseSelect = document.getElementById('exercise');
+      const exercise = exerciseSelect ? exerciseSelect.value : "";
 
+      if (!exercise || exerciseSelect.disabled) {
+        alert("Es ist keine Übung verfügbar. Bitte wende dich an den Administrator.");
+        return;
+      }
       if (!rating) return alert("Bitte eine Bewertung auswählen!");
 
       try {
@@ -69,7 +91,7 @@
         document.getElementById('comment').value = '';
         alert("Danke für dein Feedback!");
       } catch (e) {
-        console.error("Fehler beim Hinzufügen des Feedbacks: ", e);
+        console.error("Fehler beim Hinzufügen des Feedbacks:", e);
         alert("Fehler beim Speichern deines Feedbacks!");
       }
     }
@@ -117,8 +139,10 @@
     button:hover {
       background: #e00000;
     }
-    #chartContainer {
-      margin-top: 40px;
+    p.note {
+      font-size: 0.9em;
+      color: #555;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -144,7 +168,7 @@
     <textarea id="comment" rows="3" placeholder="Was war gut, was kann besser werden?"></textarea>
 
     <button onclick="saveFeedback()">Absenden</button>
+    <p class="note">Alle Eingaben sind anonym. Die Auswertung erfolgt gesammelt in der Statistikseite.</p>
   </div>
 </body>
 </html>
-
