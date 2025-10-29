@@ -6,9 +6,96 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-database-compat.js"></script>
+  <!-- Firebase (modular SDK für Firestore) -->
+  <!-- Es ist wichtig, das `type="module"` Attribut hinzuzufügen, um Importe zu verwenden. -->
+  <!-- Verwende die neueste stabile Version (z.B. 10.x.x) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+    // === Deine Firebase Config ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
+      authDomain: "ffnfeedback.firebaseapp.com",
+      // databaseURL ist für die Realtime Database und wird für Firestore nicht benötigt
+      projectId: "ffnfeedback",
+      storageBucket: "ffnfeedback.appspot.com",
+      messagingSenderId: "469095529693",
+      appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34",
+      measurementId: "G-CDDM310YEW"
+    };
+
+    // === Firebase starten ===
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app); // Firestore initialisieren
+
+    async function saveFeedback() { // Funktion asynchron machen
+      const rating = document.getElementById('rating').value;
+      const comment = document.getElementById('comment').value.trim();
+
+      if (!rating) return alert("Bitte eine Bewertung auswählen!");
+
+      try {
+        await addDoc(collection(db, "feedbacks"), { // Daten zu einer "feedbacks"-Sammlung hinzufügen
+          rating: Number(rating),
+          comment: comment,
+          timestamp: new Date().toISOString() // Oder lieber: firebase.firestore.Timestamp.fromDate(new Date()) für Firestore-typische Zeitstempel
+        });
+        document.getElementById('comment').value = '';
+        alert("Danke für dein Feedback!");
+      } catch (e) {
+        console.error("Fehler beim Hinzufügen des Dokuments: ", e);
+        alert("Es gab einen Fehler beim Speichern deines Feedbacks.");
+      }
+    }
+
+    // === Feedback live laden ===
+    // Eine Abfrage für die "feedbacks"-Sammlung erstellen, nach Zeitstempel sortiert
+    const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
+
+    // onSnapshot hört in Echtzeit auf Änderungen in der Sammlung
+    onSnapshot(q, (snapshot) => {
+      const feedbacks = [];
+      snapshot.forEach((doc) => {
+        // Für jedes Dokument die Daten abrufen
+        feedbacks.push(doc.data());
+      });
+      updateChart(feedbacks);
+    }, (error) => {
+      console.error("Fehler beim Abhören von Dokumenten: ", error);
+    });
+
+    // Diese Funktionen müssen global verfügbar sein, wenn sie direkt aus dem HTML aufgerufen werden.
+    // Eine Möglichkeit ist, sie ans Window-Objekt zu hängen.
+    window.saveFeedback = saveFeedback;
+    window.updateChart = updateChart; // Wenn auch diese direkt aus HTML aufgerufen würde, hier nicht der Fall
+
+    function updateChart(feedbacks) {
+      const counts = [0,0,0,0,0];
+      feedbacks.forEach(f => counts[f.rating - 1]++);
+
+      const ctx = document.getElementById('feedbackChart').getContext('2d');
+      if (window.chartInstance) window.chartInstance.destroy();
+      window.chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['1', '2', '3', '4', '5'],
+          datasets: [{
+            label: 'Bewertungen',
+            data: counts,
+            backgroundColor: '#b30000'
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+
+      const list = document.getElementById('commentsList');
+      list.innerHTML = feedbacks
+        .filter(f => f.comment)
+        .map(f => `<li>${f.comment}</li>`)
+        .join('');
+    }
+  </script>
 </head>
 <body>
   <div class="card">
@@ -33,6 +120,9 @@
     <canvas id="feedbackChart"></canvas>
     <ul id="commentsList"></ul>
   </div>
+</body>
+</html>
+
 
   <script src="script.js"></script>
 </body>
