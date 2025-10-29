@@ -8,9 +8,9 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-    // === Deine Firebase Config ===
+    // === Firebase Config ===
     const firebaseConfig = {
       apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
       authDomain: "ffnfeedback.firebaseapp.com",
@@ -23,8 +23,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
-    // === Zugriffsschutz ===
     const PIN = "112";
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -37,40 +35,40 @@
       }
     });
 
-    // === Feedback live laden ===
+    // === Daten live laden ===
     function loadFeedback() {
       const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
       onSnapshot(q, (snapshot) => {
         const feedbacks = [];
         snapshot.forEach(doc => feedbacks.push(doc.data()));
+        window.allFeedbacks = feedbacks;
+        fillExerciseFilter(feedbacks);
         updateChart(feedbacks);
-        window.currentFeedbacks = feedbacks; // für Export verfügbar machen
       });
     }
 
-    // === Diagramm & Statistiken aktualisieren ===
+    // === Dropdown mit vorhandenen Übungen füllen ===
+    function fillExerciseFilter(feedbacks) {
+      const select = document.getElementById('exerciseFilter');
+      const unique = [...new Set(feedbacks.map(f => f.exercise || "Allgemein"))].sort();
+      select.innerHTML = '<option value="Alle">Alle Übungen</option>' + 
+        unique.map(u => `<option value="${u}">${u}</option>`).join('');
+    }
+
+    // === Diagramm & Liste aktualisieren ===
     function updateChart(feedbacks) {
       const counts = [0,0,0,0,0];
       let total = 0;
-      feedbacks.forEach(f => {
-        counts[f.rating - 1]++;
-        total += f.rating;
-      });
-
-      const avg = feedbacks.length ? (total / feedbacks.length).toFixed(2) : "-";
+      feedbacks.forEach(f => { counts[f.rating-1]++; total += f.rating; });
+      const avg = feedbacks.length ? (total/feedbacks.length).toFixed(2) : "-";
       document.getElementById('avgRating').textContent = avg;
 
       const ctx = document.getElementById('feedbackChart').getContext('2d');
       if (window.chartInstance) window.chartInstance.destroy();
       window.chartInstance = new Chart(ctx, {
         type: 'bar',
-        data: {
-          labels: ['1', '2', '3', '4', '5'],
-          datasets: [{
-            label: 'Bewertungen',
-            data: counts,
-            backgroundColor: '#b30000'
-          }]
+        data: { labels: ['1','2','3','4','5'],
+          datasets: [{ label: 'Bewertungen', data: counts, backgroundColor: '#b30000' }]
         },
         options: { scales: { y: { beginAtZero: true } } }
       });
@@ -78,49 +76,52 @@
       const list = document.getElementById('commentsList');
       list.innerHTML = feedbacks
         .filter(f => f.comment)
-        .map(f => `<li>${f.comment}</li>`)
+        .map(f => `<li><b>${f.exercise || "Allgemein"}:</b> ${f.comment}</li>`)
         .join('');
     }
 
-    // === CSV-Exportfunktion ===
-    async function exportCSV() {
-      const feedbacks = window.currentFeedbacks || [];
-      if (!feedbacks.length) return alert("Keine Daten zum Exportieren.");
+    // === Filter anwenden ===
+    function applyFilter() {
+      const value = document.getElementById('exerciseFilter').value;
+      const all = window.allFeedbacks || [];
+      const filtered = (value === "Alle") ? all : all.filter(f => f.exercise === value);
+      updateChart(filtered);
+    }
+    window.applyFilter = applyFilter;
 
-      // CSV-Header
-      let csv = "Bewertung,Kommentar,Zeitstempel\n";
+    // === CSV-Export ===
+    function exportCSV() {
+      const feedbacks = window.allFeedbacks || [];
+      if (!feedbacks.length) return alert("Keine Daten zum Exportieren.");
+      let csv = "Übung,Bewertung,Kommentar,Zeitstempel\n";
       feedbacks.forEach(f => {
+        const ex = f.exercise || "Allgemein";
         const rating = f.rating ?? "";
         const comment = (f.comment || "").replace(/[\r\n,]/g, " ");
         const ts = f.timestamp ?? "";
-        csv += `${rating},"${comment}",${ts}\n`;
+        csv += `"${ex}",${rating},"${comment}",${ts}\n`;
       });
-
-      // Download erzeugen
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
+      const blob = new Blob([csv], {type:"text/csv"});
       const a = document.createElement("a");
-      a.href = url;
+      a.href = URL.createObjectURL(blob);
       a.download = `feedback_export_${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
-      URL.revokeObjectURL(url);
     }
-
-    // Button-Funktion global machen
     window.exportCSV = exportCSV;
   </script>
 
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 700px; margin: auto; }
-    h1, h2 { color: #b30000; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 750px; margin: auto; }
+    h1,h2 { color: #b30000; }
     #content { display: none; }
     #avgRating { font-size: 1.4em; font-weight: bold; }
-    #exportBtn {
+    #exportBtn, #exerciseFilter {
       background: #b30000; color: white; border: none; padding: 8px 14px;
       border-radius: 6px; cursor: pointer; margin-bottom: 10px;
     }
     #exportBtn:hover { background: #e00000; }
+    #exerciseFilter { color:white; }
   </style>
 </head>
 
@@ -129,6 +130,9 @@
     <div class="card">
       <h1>📊 Feuerwehr Feedback – Auswertung</h1>
       <p>Durchschnittsbewertung: <span id="avgRating">-</span></p>
+      <select id="exerciseFilter" onchange="applyFilter()"> 
+        <option>Alle Übungen</option>
+      </select>
       <button id="exportBtn" onclick="exportCSV()">💾 CSV exportieren</button>
       <canvas id="feedbackChart"></canvas>
     </div>
