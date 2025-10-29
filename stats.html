@@ -9,7 +9,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     // === Firebase Config ===
     const firebaseConfig = {
@@ -61,33 +61,51 @@
       });
     }
 
+    // === Übung hinzufügen ===
     async function addExercise() {
       const newEx = prompt("Neue Übung hinzufügen:");
       if (newEx && newEx.trim() !== "") {
+        const name = newEx.trim();
         const select = document.getElementById("exerciseFilter");
-        const exists = Array.from(select.options).some(o => o.value === newEx);
-        if (!exists) {
-          // Lokale Anzeige
-          const opt = document.createElement("option");
-          opt.value = newEx;
-          opt.textContent = newEx;
-          select.appendChild(opt);
+        const exists = Array.from(select.options).some(o => o.value === name);
+        if (exists) return alert("Diese Übung existiert bereits.");
     
-          // 🔥 In Firestore speichern (Sammlung 'exercises')
-          try {
-            await addDoc(collection(db, "exercises"), {
-              name: newEx,
-              createdAt: new Date().toISOString()
-            });
-            alert(`Übung "${newEx}" wurde gespeichert.`);
-          } catch (e) {
-            console.error("Fehler beim Speichern der Übung:", e);
-            alert("Fehler beim Speichern der neuen Übung!");
-          }
+        try {
+          await addDoc(collection(db, "exercises"), {
+            name: name,
+            createdAt: new Date().toISOString()
+          });
+          alert(`Übung "${name}" wurde hinzugefügt.`);
+        } catch (e) {
+          console.error("Fehler beim Speichern der Übung:", e);
+          alert("Fehler beim Speichern der neuen Übung!");
         }
       }
     }
+    
+    // === Übung löschen ===
+    async function deleteExercise() {
+      const select = document.getElementById("exerciseFilter");
+      const selected = select.value;
+      if (!selected) return alert("Bitte eine Übung auswählen.");
+      if (!confirm(`Möchtest du die Übung "${selected}" wirklich löschen?`)) return;
+    
+      try {
+        const qSnap = await getDocs(collection(db, "exercises"));
+        qSnap.forEach(async (d) => {
+          const data = d.data();
+          if (data.name === selected) {
+            await deleteDoc(doc(db, "exercises", d.id));
+          }
+        });
+        alert(`Übung "${selected}" wurde gelöscht.`);
+      } catch (e) {
+        console.error("Fehler beim Löschen der Übung:", e);
+        alert("Fehler beim Löschen der Übung!");
+      }
+    }
     window.addExercise = addExercise;
+    window.deleteExercise = deleteExercise;
 
 
     // === Filter anwenden ===
@@ -181,7 +199,8 @@
       <p>Durchschnittsbewertung: <span id="avgRating">-</span></p>
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         <select id="exerciseFilter" onchange="applyFilter()"></select>
-        <button onclick="addExercise()">➕ Übung hinzufügen</button>
+        <button onclick="addExercise()">➕ Hinzufügen</button>
+        <button onclick="deleteExercise()">🗑️ Löschen</button>
         <button onclick="exportPDF()">📄 PDF exportieren</button>
       </div>
       <canvas id="feedbackChart"></canvas>
