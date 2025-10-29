@@ -2,7 +2,7 @@
 const firebaseConfig = {
   apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
   authDomain: "ffnfeedback.firebaseapp.com",
-  databaseURL: "https://ffnfeedback-default-rtdb.europe-west1.firebasedatabase.app", // 👈 wichtig
+  databaseURL: "https://ffnfeedback-default-rtdb.europe-west4.firebasedatabase.app", // 👈 wichtig
   projectId: "ffnfeedback",
   storageBucket: "ffnfeedback.appspot.com",
   messagingSenderId: "469095529693",
