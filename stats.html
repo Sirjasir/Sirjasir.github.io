@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Feuerwehr Feedback – Auswertung</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     // === Firebase Config ===
     const firebaseConfig = {
@@ -18,14 +19,14 @@
       storageBucket: "ffnfeedback.appspot.com",
       messagingSenderId: "469095529693",
       appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34",
-      measurementId: "G-CDDM310YEW"
+      measurementId: "G-CDDM310YEW",
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const PIN = "112";
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener("DOMContentLoaded", () => {
       const entered = prompt("PIN eingeben:");
       if (entered === PIN) {
         document.getElementById("content").style.display = "block";
@@ -35,79 +36,109 @@
       }
     });
 
-    // === Daten live laden ===
+    // === Firestore live laden ===
     function loadFeedback() {
       const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
       onSnapshot(q, (snapshot) => {
         const feedbacks = [];
-        snapshot.forEach(doc => feedbacks.push(doc.data()));
+        snapshot.forEach((doc) => feedbacks.push(doc.data()));
         window.allFeedbacks = feedbacks;
-        fillExerciseFilter(feedbacks);
-        updateChart(feedbacks);
+        updateExercises(feedbacks);
+        applyFilter(); // Standardanzeige
       });
     }
 
-    // === Dropdown mit vorhandenen Übungen füllen ===
-    function fillExerciseFilter(feedbacks) {
-      const select = document.getElementById('exerciseFilter');
-      const unique = [...new Set(feedbacks.map(f => f.exercise || "Allgemein"))].sort();
-      select.innerHTML = '<option value="Alle">Alle Übungen</option>' + 
-        unique.map(u => `<option value="${u}">${u}</option>`).join('');
-    }
-
-    // === Diagramm & Liste aktualisieren ===
-    function updateChart(feedbacks) {
-      const counts = [0,0,0,0,0];
-      let total = 0;
-      feedbacks.forEach(f => { counts[f.rating-1]++; total += f.rating; });
-      const avg = feedbacks.length ? (total/feedbacks.length).toFixed(2) : "-";
-      document.getElementById('avgRating').textContent = avg;
-
-      const ctx = document.getElementById('feedbackChart').getContext('2d');
-      if (window.chartInstance) window.chartInstance.destroy();
-      window.chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: ['1','2','3','4','5'],
-          datasets: [{ label: 'Bewertungen', data: counts, backgroundColor: '#b30000' }]
-        },
-        options: { scales: { y: { beginAtZero: true } } }
+    // === Übungen verwalten ===
+    function updateExercises(feedbacks) {
+      const select = document.getElementById("exerciseFilter");
+      const exercises = new Set(feedbacks.map(f => f.exercise || "Allgemein"));
+      select.innerHTML = "";
+      exercises.forEach(ex => {
+        const opt = document.createElement("option");
+        opt.value = ex;
+        opt.textContent = ex;
+        select.appendChild(opt);
       });
-
-      const list = document.getElementById('commentsList');
-      list.innerHTML = feedbacks
-        .filter(f => f.comment)
-        .map(f => `<li><b>${f.exercise || "Allgemein"}:</b> ${f.comment}</li>`)
-        .join('');
     }
+
+    function addExercise() {
+      const newEx = prompt("Neue Übung hinzufügen:");
+      if (newEx && !Array.from(document.getElementById("exerciseFilter").options).some(o => o.value === newEx)) {
+        const opt = document.createElement("option");
+        opt.value = newEx;
+        opt.textContent = newEx;
+        document.getElementById("exerciseFilter").appendChild(opt);
+      }
+    }
+    window.addExercise = addExercise;
 
     // === Filter anwenden ===
     function applyFilter() {
-      const value = document.getElementById('exerciseFilter').value;
+      const selected = document.getElementById("exerciseFilter").value;
       const all = window.allFeedbacks || [];
-      const filtered = (value === "Alle") ? all : all.filter(f => f.exercise === value);
+      const filtered = selected ? all.filter(f => f.exercise === selected) : all;
       updateChart(filtered);
     }
     window.applyFilter = applyFilter;
 
-    // === CSV-Export ===
-    function exportCSV() {
-      const feedbacks = window.allFeedbacks || [];
-      if (!feedbacks.length) return alert("Keine Daten zum Exportieren.");
-      let csv = "Übung,Bewertung,Kommentar,Zeitstempel\n";
-      feedbacks.forEach(f => {
-        const ex = f.exercise || "Allgemein";
-        const rating = f.rating ?? "";
-        const comment = (f.comment || "").replace(/[\r\n,]/g, " ");
-        const ts = f.timestamp ?? "";
-        csv += `"${ex}",${rating},"${comment}",${ts}\n`;
+    // === Diagramm & Statistiken ===
+    function updateChart(feedbacks) {
+      const counts = [0,0,0,0,0];
+      let total = 0;
+      feedbacks.forEach(f => { counts[f.rating-1]++; total += f.rating; });
+      const avg = feedbacks.length ? (total / feedbacks.length).toFixed(2) : "-";
+      document.getElementById("avgRating").textContent = avg;
+
+      const ctx = document.getElementById("feedbackChart").getContext("2d");
+      if (window.chartInstance) window.chartInstance.destroy();
+      window.chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["1","2","3","4","5"],
+          datasets: [{ label: "Bewertungen", data: counts, backgroundColor: "#b30000" }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
       });
-      const blob = new Blob([csv], {type:"text/csv"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `feedback_export_${new Date().toISOString().slice(0,10)}.csv`;
-      a.click();
+
+      const list = document.getElementById("commentsList");
+      list.innerHTML = feedbacks
+        .filter(f => f.comment)
+        .map(f => `<li>${f.comment}</li>`)
+        .join("");
+
+      window.currentFeedbacks = feedbacks;
+      window.currentExercise = document.getElementById("exerciseFilter").value;
     }
-    window.exportCSV = exportCSV;
+
+    // === PDF-Export ===
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const feedbacks = window.currentFeedbacks || [];
+      const exercise = window.currentExercise || "Gesamt";
+
+      doc.setFontSize(18);
+      doc.text(`Feuerwehr Feedback – ${exercise}`, 14, 20);
+      doc.setFontSize(12);
+
+      const avg = document.getElementById("avgRating").textContent;
+      doc.text(`Durchschnittsbewertung: ${avg}`, 14, 30);
+      doc.text(`Anzahl Feedbacks: ${feedbacks.length}`, 14, 37);
+
+      let y = 50;
+      doc.setFontSize(12);
+      feedbacks.forEach((f, i) => {
+        const comment = f.comment || "";
+        const line = `${i + 1}. [${f.rating}/5] ${comment}`;
+        const split = doc.splitTextToSize(line, 180);
+        doc.text(split, 14, y);
+        y += split.length * 7;
+        if (y > 270) { doc.addPage(); y = 20; }
+      });
+
+      doc.save(`Feedback_${exercise}_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+    window.exportPDF = exportPDF;
   </script>
 
   <style>
@@ -116,12 +147,12 @@
     h1,h2 { color: #b30000; }
     #content { display: none; }
     #avgRating { font-size: 1.4em; font-weight: bold; }
-    #exportBtn, #exerciseFilter {
+    select, button {
       background: #b30000; color: white; border: none; padding: 8px 14px;
       border-radius: 6px; cursor: pointer; margin-bottom: 10px;
     }
-    #exportBtn:hover { background: #e00000; }
-    #exerciseFilter { color:white; }
+    button:hover { background: #e00000; }
+    select { margin-right: 8px; }
   </style>
 </head>
 
@@ -130,10 +161,11 @@
     <div class="card">
       <h1>📊 Feuerwehr Feedback – Auswertung</h1>
       <p>Durchschnittsbewertung: <span id="avgRating">-</span></p>
-      <select id="exerciseFilter" onchange="applyFilter()"> 
-        <option>Alle Übungen</option>
-      </select>
-      <button id="exportBtn" onclick="exportCSV()">💾 CSV exportieren</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <select id="exerciseFilter" onchange="applyFilter()"></select>
+        <button onclick="addExercise()">➕ Übung hinzufügen</button>
+        <button onclick="exportPDF()">📄 PDF exportieren</button>
+      </div>
       <canvas id="feedbackChart"></canvas>
     </div>
 
