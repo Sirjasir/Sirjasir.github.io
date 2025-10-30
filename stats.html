@@ -1,220 +1,175 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <title>Feuerwehr Feedback – Auswertung</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+  import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, getDocs, deleteDoc, doc } 
+    from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
+    authDomain: "ffnfeedback.firebaseapp.com",
+    projectId: "ffnfeedback",
+    storageBucket: "ffnfeedback.appspot.com",
+    messagingSenderId: "469095529693",
+    appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34",
+    measurementId: "G-CDDM310YEW"
+  };
 
-    // === Firebase Config ===
-    const firebaseConfig = {
-      apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
-      authDomain: "ffnfeedback.firebaseapp.com",
-      projectId: "ffnfeedback",
-      storageBucket: "ffnfeedback.appspot.com",
-      messagingSenderId: "469095529693",
-      appId: "1:469095529693:web:b8f8a1c24593b67c9e6f34",
-      measurementId: "G-CDDM310YEW",
-    };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const PIN = "112";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const PIN = "112";
-
-    window.addEventListener("DOMContentLoaded", () => {
-      const entered = prompt("PIN eingeben:");
-      if (entered === PIN) {
-        document.getElementById("content").style.display = "block";
-        loadFeedback();
-      } else {
-        alert("Falsche PIN – Zugriff verweigert.");
-      }
-    });
-
-    // === Firestore live laden ===
-    function loadFeedback() {
-      const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
-      onSnapshot(q, (snapshot) => {
-        const feedbacks = [];
-        snapshot.forEach((doc) => feedbacks.push(doc.data()));
-        window.allFeedbacks = feedbacks;
-        updateExercises(feedbacks);
-        applyFilter(); // Standardanzeige
-      });
+  // === Start ===
+  window.addEventListener("DOMContentLoaded", () => {
+    const entered = prompt("PIN eingeben:");
+    if (entered === PIN) {
+      document.getElementById("content").style.display = "block";
+      loadExercises();
+      loadFeedback();
+    } else {
+      alert("Falsche PIN – Zugriff verweigert.");
     }
+  });
 
-    // === Übungen verwalten ===
-    function updateExercises(feedbacks) {
-      const select = document.getElementById("exerciseFilter");
-      const exercises = new Set(feedbacks.map(f => f.exercise || "Allgemein"));
+  // === Live Feedback laden ===
+  function loadFeedback() {
+    const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
+    onSnapshot(q, (snapshot) => {
+      const feedbacks = [];
+      snapshot.forEach((d) => feedbacks.push(d.data()));
+      window.allFeedbacks = feedbacks;
+      applyFilter(); // nur Filter + Chart aktualisieren
+    });
+  }
+
+  // === Live Übungen laden ===
+  function loadExercises() {
+    const select = document.getElementById("exerciseFilter");
+    if (!select) return;
+    const ref = collection(db, "exercises");
+
+    onSnapshot(ref, (snapshot) => {
       select.innerHTML = "";
-      exercises.forEach(ex => {
+      const names = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data?.name) names.push(data.name);
+      });
+      names.sort((a,b) => a.localeCompare(b,"de"));
+      names.forEach((n) => {
         const opt = document.createElement("option");
-        opt.value = ex;
-        opt.textContent = ex;
+        opt.value = n;
+        opt.textContent = n;
         select.appendChild(opt);
       });
-    }
+      console.log("[Sync] Übungen aktualisiert:", names);
+      applyFilter();
+    }, (err) => console.error("[Sync] Fehler:", err));
+  }
 
-    // === Übung hinzufügen ===
-    async function addExercise() {
-      const newEx = prompt("Neue Übung hinzufügen:");
-      if (newEx && newEx.trim() !== "") {
-        const name = newEx.trim();
-        const select = document.getElementById("exerciseFilter");
-        const exists = Array.from(select.options).some(o => o.value === name);
-        if (exists) return alert("Diese Übung existiert bereits.");
-    
-        try {
-          await addDoc(collection(db, "exercises"), {
-            name: name,
-            createdAt: new Date().toISOString()
-          });
-          alert(`Übung "${name}" wurde hinzugefügt.`);
-        } catch (e) {
-          console.error("Fehler beim Speichern der Übung:", e);
-          alert("Fehler beim Speichern der neuen Übung!");
+  // === Übung hinzufügen ===
+  async function addExercise() {
+    const newEx = prompt("Neue Übung hinzufügen:");
+    if (!newEx || !newEx.trim()) return;
+    const name = newEx.trim();
+    try {
+      await addDoc(collection(db, "exercises"), {
+        name,
+        createdAt: new Date().toISOString()
+      });
+      alert(`Übung "${name}" wurde hinzugefügt.`);
+    } catch (e) {
+      console.error("Fehler beim Speichern:", e);
+    }
+  }
+
+  // === Übung löschen ===
+  async function deleteExercise() {
+    const select = document.getElementById("exerciseFilter");
+    const selected = select.value;
+    if (!selected) return alert("Bitte eine Übung auswählen.");
+    if (!confirm(`Möchtest du "${selected}" wirklich löschen?`)) return;
+    try {
+      const qSnap = await getDocs(collection(db, "exercises"));
+      qSnap.forEach(async (d) => {
+        const data = d.data();
+        if (data.name === selected) {
+          await deleteDoc(doc(db, "exercises", d.id));
         }
-      }
+      });
+      alert(`Übung "${selected}" wurde gelöscht.`);
+    } catch (e) {
+      console.error("Fehler beim Löschen:", e);
     }
-    
-    // === Übung löschen ===
-    async function deleteExercise() {
-      const select = document.getElementById("exerciseFilter");
-      const selected = select.value;
-      if (!selected) return alert("Bitte eine Übung auswählen.");
-      if (!confirm(`Möchtest du die Übung "${selected}" wirklich löschen?`)) return;
-    
-      try {
-        const qSnap = await getDocs(collection(db, "exercises"));
-        qSnap.forEach(async (d) => {
-          const data = d.data();
-          if (data.name === selected) {
-            await deleteDoc(doc(db, "exercises", d.id));
-          }
-        });
-        alert(`Übung "${selected}" wurde gelöscht.`);
-      } catch (e) {
-        console.error("Fehler beim Löschen der Übung:", e);
-        alert("Fehler beim Löschen der Übung!");
-      }
-    }
-    window.addExercise = addExercise;
-    window.deleteExercise = deleteExercise;
-    window.addEventListener('DOMContentLoaded', () => {
-      const entered = prompt("PIN eingeben:");
-      if (entered === PIN) {
-        document.getElementById("content").style.display = "block";
-        loadExercises(); // 👈 neu
-        loadFeedback();
-      } else {
-        alert("Falsche PIN – Zugriff verweigert.");
-      }
+  }
+
+  window.addExercise = addExercise;
+  window.deleteExercise = deleteExercise;
+
+  // === Filter & Chart ===
+  function applyFilter() {
+    const selected = document.getElementById("exerciseFilter").value;
+    const all = window.allFeedbacks || [];
+    const filtered = selected ? all.filter(f => f.exercise === selected) : all;
+    updateChart(filtered);
+  }
+  window.applyFilter = applyFilter;
+
+  function updateChart(feedbacks) {
+    const counts = [0,0,0,0,0];
+    let total = 0;
+    feedbacks.forEach(f => { counts[f.rating-1]++; total += f.rating; });
+    const avg = feedbacks.length ? (total / feedbacks.length).toFixed(2) : "-";
+    document.getElementById("avgRating").textContent = avg;
+
+    const ctx = document.getElementById("feedbackChart").getContext("2d");
+    if (window.chartInstance) window.chartInstance.destroy();
+    window.chartInstance = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["1","2","3","4","5"],
+        datasets: [{ label: "Bewertungen", data: counts, backgroundColor: "#b30000" }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
     });
 
+    const list = document.getElementById("commentsList");
+    list.innerHTML = feedbacks
+      .filter(f => f.comment)
+      .map(f => `<li>${f.comment}</li>`)
+      .join("");
 
-    function loadExercises() {
-      const select = document.getElementById("exerciseFilter");
-      if (!select) return;
-    
-      const ref = collection(db, "exercises");
-      // kein orderBy – Firestore pusht alle Änderungen automatisch
-      onSnapshot(ref, (snapshot) => {
-        select.innerHTML = "";
-        const names = [];
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data();
-          if (data?.name) names.push(data.name);
-        });
-        names.sort((a, b) => a.localeCompare(b, "de"));
-        names.forEach(n => {
-          const opt = document.createElement("option");
-          opt.value = n;
-          opt.textContent = n;
-          select.appendChild(opt);
-        });
-        console.log("[Sync] Übungen aktualisiert:", names);
-        applyFilter(); // damit das Chart neu rendert
-      }, (err) => {
-        console.error("[Sync] Fehler beim Abrufen der Übungen:", err);
-      });
-    }
+    window.currentFeedbacks = feedbacks;
+    window.currentExercise = document.getElementById("exerciseFilter").value;
+  }
 
+  // === PDF Export ===
+  async function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const feedbacks = window.currentFeedbacks || [];
+    const exercise = window.currentExercise || "Gesamt";
 
+    doc.setFontSize(18);
+    doc.text(`Feuerwehr Feedback – ${exercise}`, 14, 20);
+    doc.setFontSize(12);
+    const avg = document.getElementById("avgRating").textContent;
+    doc.text(`Durchschnittsbewertung: ${avg}`, 14, 30);
+    doc.text(`Anzahl Feedbacks: ${feedbacks.length}`, 14, 37);
 
-    // === Filter anwenden ===
-    function applyFilter() {
-      const selected = document.getElementById("exerciseFilter").value;
-      const all = window.allFeedbacks || [];
-      const filtered = selected ? all.filter(f => f.exercise === selected) : all;
-      updateChart(filtered);
-    }
-    window.applyFilter = applyFilter;
+    let y = 50;
+    feedbacks.forEach((f, i) => {
+      const comment = f.comment || "";
+      const line = `${i + 1}. [${f.rating}/5] ${comment}`;
+      const split = doc.splitTextToSize(line, 180);
+      doc.text(split, 14, y);
+      y += split.length * 7;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
 
-    // === Diagramm & Statistiken ===
-    function updateChart(feedbacks) {
-      const counts = [0,0,0,0,0];
-      let total = 0;
-      feedbacks.forEach(f => { counts[f.rating-1]++; total += f.rating; });
-      const avg = feedbacks.length ? (total / feedbacks.length).toFixed(2) : "-";
-      document.getElementById("avgRating").textContent = avg;
+    doc.save(`Feedback_${exercise}_${new Date().toISOString().slice(0,10)}.pdf`);
+  }
+  window.exportPDF = exportPDF;
+</script>
 
-      const ctx = document.getElementById("feedbackChart").getContext("2d");
-      if (window.chartInstance) window.chartInstance.destroy();
-      window.chartInstance = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: ["1","2","3","4","5"],
-          datasets: [{ label: "Bewertungen", data: counts, backgroundColor: "#b30000" }]
-        },
-        options: { scales: { y: { beginAtZero: true } } }
-      });
-
-      const list = document.getElementById("commentsList");
-      list.innerHTML = feedbacks
-        .filter(f => f.comment)
-        .map(f => `<li>${f.comment}</li>`)
-        .join("");
-
-      window.currentFeedbacks = feedbacks;
-      window.currentExercise = document.getElementById("exerciseFilter").value;
-    }
-
-    // === PDF-Export ===
-    async function exportPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const feedbacks = window.currentFeedbacks || [];
-      const exercise = window.currentExercise || "Gesamt";
-
-      doc.setFontSize(18);
-      doc.text(`Feuerwehr Feedback – ${exercise}`, 14, 20);
-      doc.setFontSize(12);
-
-      const avg = document.getElementById("avgRating").textContent;
-      doc.text(`Durchschnittsbewertung: ${avg}`, 14, 30);
-      doc.text(`Anzahl Feedbacks: ${feedbacks.length}`, 14, 37);
-
-      let y = 50;
-      doc.setFontSize(12);
-      feedbacks.forEach((f, i) => {
-        const comment = f.comment || "";
-        const line = `${i + 1}. [${f.rating}/5] ${comment}`;
-        const split = doc.splitTextToSize(line, 180);
-        doc.text(split, 14, y);
-        y += split.length * 7;
-        if (y > 270) { doc.addPage(); y = 20; }
-      });
-
-      doc.save(`Feedback_${exercise}_${new Date().toISOString().slice(0,10)}.pdf`);
-    }
-    window.exportPDF = exportPDF;
-  </script>
 
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7; }
