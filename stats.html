@@ -1,8 +1,11 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, getDocs, deleteDoc, doc } 
-    from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+  import { 
+    getFirestore, collection, onSnapshot, query, orderBy, 
+    addDoc, getDocs, deleteDoc, doc 
+  } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
+  // === Firebase Config ===
   const firebaseConfig = {
     apiKey: "AIzaSyBW7F4lrLQG8-OqLaE9hpXI9QxdTWaThXo",
     authDomain: "ffnfeedback.firebaseapp.com",
@@ -17,7 +20,7 @@
   const db = getFirestore(app);
   const PIN = "112";
 
-  // === Start ===
+  // === Startschutz ===
   window.addEventListener("DOMContentLoaded", () => {
     const entered = prompt("PIN eingeben:");
     if (entered === PIN) {
@@ -29,18 +32,22 @@
     }
   });
 
-  // === Live Feedback laden ===
+  // === Feedbacks live laden ===
   function loadFeedback() {
     const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
     onSnapshot(q, (snapshot) => {
       const feedbacks = [];
       snapshot.forEach((d) => feedbacks.push(d.data()));
       window.allFeedbacks = feedbacks;
-      applyFilter(); // nur Filter + Chart aktualisieren
+      console.log("[Feedback] geladen:", feedbacks.length);
+      // Wenn noch keine Übung gewählt, Standard auf erste setzen
+      const current = document.getElementById("exerciseFilter")?.value;
+      if (!current) updateChart(feedbacks);
+      else applyFilter();
     });
   }
 
-  // === Live Übungen laden ===
+  // === Übungen live laden ===
   function loadExercises() {
     const select = document.getElementById("exerciseFilter");
     if (!select) return;
@@ -60,9 +67,11 @@
         opt.textContent = n;
         select.appendChild(opt);
       });
-      console.log("[Sync] Übungen aktualisiert:", names);
-      applyFilter();
-    }, (err) => console.error("[Sync] Fehler:", err));
+      console.log("[Übungen] aktualisiert:", names);
+
+      // Wenn nach erstem Laden Feedbacks schon existieren → rendern
+      if (window.allFeedbacks) applyFilter();
+    }, (err) => console.error("[Übungen] Fehler:", err));
   }
 
   // === Übung hinzufügen ===
@@ -104,7 +113,7 @@
   window.addExercise = addExercise;
   window.deleteExercise = deleteExercise;
 
-  // === Filter & Chart ===
+  // === Filter & Diagramm ===
   function applyFilter() {
     const selected = document.getElementById("exerciseFilter").value;
     const all = window.allFeedbacks || [];
@@ -116,7 +125,12 @@
   function updateChart(feedbacks) {
     const counts = [0,0,0,0,0];
     let total = 0;
-    feedbacks.forEach(f => { counts[f.rating-1]++; total += f.rating; });
+    feedbacks.forEach(f => {
+      if (!f.rating) return;
+      counts[f.rating-1]++;
+      total += f.rating;
+    });
+
     const avg = feedbacks.length ? (total / feedbacks.length).toFixed(2) : "-";
     document.getElementById("avgRating").textContent = avg;
 
@@ -126,16 +140,25 @@
       type: "bar",
       data: {
         labels: ["1","2","3","4","5"],
-        datasets: [{ label: "Bewertungen", data: counts, backgroundColor: "#b30000" }]
+        datasets: [{
+          label: "Bewertungen",
+          data: counts,
+          backgroundColor: "#b30000"
+        }]
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
 
+    // Kommentare rendern
     const list = document.getElementById("commentsList");
-    list.innerHTML = feedbacks
-      .filter(f => f.comment)
-      .map(f => `<li>${f.comment}</li>`)
-      .join("");
+    if (feedbacks.length === 0) {
+      list.innerHTML = "<li>Keine Rückmeldungen vorhanden.</li>";
+    } else {
+      list.innerHTML = feedbacks
+        .filter(f => f.comment)
+        .map(f => `<li>[${f.exercise || "–"}] ${f.comment}</li>`)
+        .join('');
+    }
 
     window.currentFeedbacks = feedbacks;
     window.currentExercise = document.getElementById("exerciseFilter").value;
@@ -146,6 +169,7 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const feedbacks = window.currentFeedbacks || [];
+    if (!feedbacks.length) return alert("Keine Feedbacks zum Exportieren!");
     const exercise = window.currentExercise || "Gesamt";
 
     doc.setFontSize(18);
@@ -169,6 +193,7 @@
   }
   window.exportPDF = exportPDF;
 </script>
+
 
 
   <style>
