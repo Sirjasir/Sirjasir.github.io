@@ -158,7 +158,7 @@
         .filter(f => f.comment)
         .map(f => {
             const prefix = currentEx ? '' : `[${f.exercise || "-"}] `;
-            return`<li>[${f.exercise || "–"}] ${f.comment}</li>`
+            return`<li>${prefix}${f.comment}</li>`
         })
         .join('');
     }
