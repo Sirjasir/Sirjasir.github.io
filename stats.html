@@ -195,6 +195,57 @@
     doc.save(`Feedback_${exercise}_${new Date().toISOString().slice(0,10)}.pdf`);
   }
   window.exportPDF = exportPDF;
+
+
+
+    // === Alte Feedbacks löschen ===
+    async function deleteOldFeedbacks() {
+        // Stichtag berechnen: Heute minus 2 Jahre (in ISO-String-Format)
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        const cutOffTimestamp = twoYearsAgo.toISOString();
+        
+        // Doppelte Sicherheitsabfrage
+        if (!confirm(`Möchtest du WIRKLICH alle Feedbacks löschen, die älter als ${twoYearsAgo.toLocaleDateString()} sind? Dieser Schritt kann NICHT rückgängig gemacht werden.`)) {
+            return;
+        }
+    
+        try {
+            const feedbacksRef = collection(db, "feedbacks");
+            // Abfrage: Suche Feedbacks, deren 'timestamp' (string) vor dem Stichtag liegt
+            const q = query(
+                feedbacksRef, 
+                orderBy("timestamp"),
+                where("timestamp", "<", cutOffTimestamp)
+            );
+            
+            const qSnap = await getDocs(q);
+            const count = qSnap.docs.length;
+    
+            if (count === 0) {
+                alert("Es wurden keine Feedbacks gefunden, die älter als 2 Jahre sind.");
+                return;
+            }
+    
+            // Batch-Löschung (effizienter, falls es sehr viele Feedbacks sind, 
+            // hier machen wir es einfach mit individuellem Löschen)
+            
+            console.log(`[Datenhygiene] Lösche ${count} alte Feedbacks...`);
+            
+            const deletePromises = qSnap.docs.map(d => deleteDoc(doc(db, "feedbacks", d.id)));
+            
+            await Promise.all(deletePromises);
+            
+            alert(`${count} Feedbacks, die älter als 2 Jahre sind, wurden erfolgreich gelöscht.`);
+            
+        } catch (e) {
+            console.error("Fehler beim Löschen alter Feedbacks:", e);
+            alert("Fehler beim Löschen alter Feedbacks. Prüfe die Konsole.");
+        }
+    }
+    
+    window.deleteOldFeedbacks = deleteOldFeedbacks; // Funktion global verfügbar machen
+      
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
@@ -225,6 +276,7 @@
         <button onclick="addExercise()">➕ Hinzufügen</button>
         <button onclick="deleteExercise()">🗑️ Löschen</button>
         <button onclick="exportPDF()">📄 PDF exportieren</button>
+        <button onclick="deleteOldFeedbacks()">🧹 Alte Feedbacks (>2 Jahre) löschen</button>
       </div>
       <canvas id="feedbackChart"></canvas>
     </div>
