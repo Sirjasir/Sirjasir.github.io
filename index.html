@@ -30,9 +30,12 @@
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
           if (data?.name) {
-            names.push(data.name);
             if (data.isLocked) {
-              window.lockedExercises[data.name] = true;
+                // Nur den Status speichern (für die saveFeedback-Prüfung)
+                window.lockedExercises[data.name] = true;
+            } else {
+                // Nur Übungen ohne Lock werden in die Liste aufgenommen
+                names.push(data.name); 
             }
           }
         });
