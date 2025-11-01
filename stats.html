@@ -140,21 +140,29 @@ window.updateLockButtonText = updateLockButtonText;
     }, (err) => console.error("[Übungen] Fehler:", err));
 }
 
-  // === Übung hinzufügen ===
-  async function addExercise() {
-    const newEx = prompt("Neue Übung hinzufügen:");
-    if (!newEx || !newEx.trim()) return;
-    const name = newEx.trim();
-    try {
-      await addDoc(collection(db, "exercises"), {
-        name,
-        createdAt: new Date().toISOString()
-      });
-      alert(`Übung "${name}" wurde hinzugefügt.`);
-    } catch (e) {
-      console.error("Fehler beim Speichern:", e);
-    }
-  }
+    // === Übung hinzufügen ===
+    async function addExercise() {
+        const newEx = prompt("Neue Übung hinzufügen:");
+        if (!newEx || !newEx.trim()) return;
+        
+        // 🔥 NEU: Datum hinzufügen
+        const now = new Date();
+        // Beispielformat: 01.11.2025
+        const dateStr = now.toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' }); 
+        
+        // Kombiniert Datum und Eingabe zu einem eindeutigen Namen
+        const name = `${dateStr} – ${newEx.trim()}`; 
+        
+        try {
+          await addDoc(collection(db, "exercises"), {
+            name,
+            createdAt: new Date().toISOString()
+          });
+          alert(`Übung "${name}" wurde hinzugefügt.`);
+        } catch (e) {
+          console.error("Fehler beim Speichern:", e);
+        }
+}
 
   // === Übung löschen ===
   async function deleteExercise() {
