@@ -123,10 +123,23 @@
 
   // === Filter & Diagramm ===
   function applyFilter() {
-    const selected = document.getElementById("exerciseFilter").value;
-    const all = window.allFeedbacks || [];
-    const filtered = selected ? all.filter(f => f.exercise === selected) : all;
-    updateChart(filtered);
+      const selectedPrimary = document.getElementById("exerciseFilter").value;
+      const selectedCompare = document.getElementById("compareFilter").value; // 🔥 NEU
+      
+      const all = window.allFeedbacks || [];
+      
+      // 1. Primäres Dataset filtern
+      const primaryFeedbacks = selectedPrimary ? all.filter(f => f.exercise === selectedPrimary) : all;
+      window.currentFeedbacks = primaryFeedbacks;
+      window.currentExercise = selectedPrimary || "Gesamt";
+  
+      // 2. Vergleichs-Dataset filtern
+      let compareFeedbacks = [];
+      if (selectedCompare) {
+          compareFeedbacks = all.filter(f => f.exercise === selectedCompare);
+      }
+      
+      updateChart(primaryFeedbacks, compareFeedbacks, selectedCompare); // 🔥 Übergabe beider Datensets
   }
   window.applyFilter = applyFilter;
 
