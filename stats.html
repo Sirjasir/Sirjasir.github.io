@@ -41,12 +41,15 @@
 
   // === Übungen live laden ===
   function loadExercises() {
-    const select = document.getElementById("exerciseFilter");
-    if (!select) return;
+    const selectPrimary = document.getElementById("exerciseFilter");
+    const selectCompare = document.getElementById("compareFilter"); // 🔥 NEU
+    if (!selectPrimary || !selectCompare) return;
     const ref = collection(db, "exercises");
 
     onSnapshot(ref, (snapshot) => {
-      select.innerHTML = "";
+      selectPrimary.innerHTML = "";
+      selectCompare.innerHTML = '<option value="" selected>Kein Vergleich</option>'; // 🔥 Vergleichsfilter initialisieren
+
       const names = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
@@ -54,23 +57,30 @@
       });
       names.sort((a,b) => a.localeCompare(b,"de"));
 
+      // Option "Alle Übungen" für den Hauptfilter hinzufügen
       const allOpt = document.createElement("option");
-      allOpt.value = ""; // Leerer Wert wird im Filter als "Alle" interpretiert
+      allOpt.value = "";
       allOpt.textContent = "Alle Übungen (Gesamt)";
-      select.appendChild(allOpt);
-      
-      names.forEach((n) => {
-        const opt = document.createElement("option");
-        opt.value = n;
-        opt.textContent = n;
-        select.appendChild(opt);
-      });
-      console.log("[Übungen] aktualisiert:", names);
+      selectPrimary.appendChild(allOpt);
 
-      // Wenn nach erstem Laden Feedbacks schon existieren → rendern
+      names.forEach((n) => {
+        // Optionen für Hauptfilter
+        let optP = document.createElement("option");
+        optP.value = n;
+        optP.textContent = n;
+        selectPrimary.appendChild(optP);
+        
+        // 🔥 Optionen für Vergleichsfilter
+        let optC = document.createElement("option");
+        optC.value = n;
+        optC.textContent = n;
+        selectCompare.appendChild(optC);
+      });
+      console.log("[Übungen] aktualisiert:", names.length, "plus Alle-Option");
+
       if (window.allFeedbacks) applyFilter();
     }, (err) => console.error("[Übungen] Fehler:", err));
-  }
+}
 
   // === Übung hinzufügen ===
   async function addExercise() {
@@ -273,6 +283,11 @@
       <p>Durchschnittsbewertung: <span id="avgRating">-</span></p>
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
         <select id="exerciseFilter" onchange="applyFilter()"></select>
+
+        <select id="compareFilter" onchange="applyFilter()">
+          <option value="" selected>Kein Vergleich</option>
+        </select>
+        
         <button onclick="addExercise()">➕ Hinzufügen</button>
         <button onclick="deleteExercise()">🗑️ Löschen</button>
         <button onclick="exportPDF()">📄 PDF exportieren</button>
