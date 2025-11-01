@@ -53,6 +53,12 @@
         if (data?.name) names.push(data.name);
       });
       names.sort((a,b) => a.localeCompare(b,"de"));
+
+      const allOpt = document.createElement("option");
+      allOpt.value = ""; // Leerer Wert wird im Filter als "Alle" interpretiert
+      allOpt.textContent = "Alle Übungen (Gesamt)";
+      select.appendChild(allOpt);
+      
       names.forEach((n) => {
         const opt = document.createElement("option");
         opt.value = n;
@@ -143,12 +149,17 @@
 
     // Kommentare rendern
     const list = document.getElementById("commentsList");
+    const currentEx = document.getElementById("exerciseFilter").value;
+    
     if (feedbacks.length === 0) {
       list.innerHTML = "<li>Keine Rückmeldungen vorhanden.</li>";
     } else {
       list.innerHTML = feedbacks
         .filter(f => f.comment)
-        .map(f => `<li>[${f.exercise || "–"}] ${f.comment}</li>`)
+        .map(f => {
+            const prefix = currentEx ? '' : `[${f.exercise || "-"}] `;
+            return`<li>[${f.exercise || "–"}] ${f.comment}</li>`
+        })
         .join('');
     }
 
