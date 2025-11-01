@@ -25,14 +25,14 @@
       const ref = collection(db, "exercises");
       onSnapshot(ref, (snapshot) => {
         const names = [];
-        window.lockedExercise = {};
+        window.lockedExercises = {};
         
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
           if (data?.name) {
             names.push(data.name);
             if (data.isLocked) {
-              window.lockedExercise[data.name] = true;
+              window.lockedExercises[data.name] = true;
             }
           }
         });
@@ -52,8 +52,8 @@
             const opt = document.createElement("option");
             opt.value = n;
             opt.textContent = n;
-            if (window.lockedExercise[n] {
-                opt.textContext += " (Gesperrt)";
+            if (window.lockedExercises[n]) {
+                opt.textContent += " (Gesperrt)";
             }
             select.appendChild(opt);
           });
