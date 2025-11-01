@@ -2,7 +2,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import { 
     getFirestore, collection, onSnapshot, query, orderBy, 
-    addDoc, getDocs, deleteDoc, doc , where
+    addDoc, getDocs, deleteDoc, doc , where, updateDoc
   } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
   // Import der Konfiguration
@@ -23,6 +23,58 @@
       alert("Falsche PIN – Zugriff verweigert.");
     }
   });
+
+  // === Übung sperren/entsperren ===
+async function toggleLockStatus() {
+    const select = document.getElementById("exerciseFilter");
+    const selected = select.value;
+    if (!selected) return alert("Bitte eine Übung auswählen.");
+
+    try {
+        const qSnap = await getDocs(collection(db, "exercises"));
+        let currentStatus = null;
+        let docRef = null;
+
+        // Finde das passende Dokument und den aktuellen Status
+        qSnap.forEach((d) => {
+            const data = d.data();
+            if (data.name === selected) {
+                currentStatus = !!data.isLocked; // Konvertiert zu Boolean, false falls Feld fehlt
+                docRef = doc(db, "exercises", d.id);
+            }
+        });
+        
+        if (!docRef) return alert("Übung nicht in Datenbank gefunden.");
+
+        const newStatus = !currentStatus;
+        
+        // Aktualisiere den Status in Firestore
+        await updateDoc(docRef, {
+            isLocked: newStatus
+        });
+
+        alert(`Übung "${selected}" wurde ${newStatus ? 'Gesperrt' : 'Entsperrt'}.`);
+        
+        // Aktualisiere den Button-Text sofort
+        updateLockButtonText(newStatus); 
+        
+    } catch (e) {
+        console.error("Fehler beim Sperren/Entsperren:", e);
+        alert("Fehler beim Ändern des Status!");
+    }
+}
+window.toggleLockStatus = toggleLockStatus;
+
+
+// === Zusätzliche Funktion: Button-Text aktualisieren ===
+// Stellt sicher, dass der Buttontext nach der Filterauswahl den korrekten Status anzeigt.
+function updateLockButtonText(isLocked) {
+    const btn = document.getElementById('lockButton');
+    btn.textContent = isLocked ? '✅ Übung entsperren' : '🔒 Übung sperren';
+    btn.style.backgroundColor = isLocked ? '#00703c' : '#b30000'; // Grüne oder rote Farbe
+}
+// Rufe diese Funktion auch im applyFilter auf, um den Status der gewählten Übung anzuzeigen.
+window.updateLockButtonText = updateLockButtonText;
 
   // === Feedbacks live laden ===
   function loadFeedback() {
@@ -53,7 +105,11 @@
       const names = [];
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data?.name) names.push(data.name);
+        if (data?.name) {
+          names.push(data.name);
+          window.exerciseStatuses = window.exerciseStatuses || {};
+          window.exerciseStatuses[data.name] = !!data.isLocked;
+        }
       });
       names.sort((a,b) => a.localeCompare(b,"de"));
 
@@ -79,6 +135,8 @@
       console.log("[Übungen] aktualisiert:", names.length, "plus Alle-Option");
 
       if (window.allFeedbacks) applyFilter();
+      const initialEx = document.getElementById("exerciseFilter").value;
+      if(initialEx && window.exerciseStatuses) updateLockButtonText(window.exerciseStatuses[initialEx]);
     }, (err) => console.error("[Übungen] Fehler:", err));
 }
 
@@ -138,6 +196,11 @@
       if (selectedCompare) {
           compareFeedbacks = all.filter(f => f.exercise === selectedCompare);
       }
+      if (window.exerciseStatuses && selectedPrimary) {
+        updateLockButtonText(window.exerciseStatuses[selectedPrimary]);
+    } else {
+        updateLockButtonText(false); // Wenn 'Alle Übungen' oder keine Übung gewählt
+    }
       
       updateChart(primaryFeedbacks, compareFeedbacks, selectedCompare); // 🔥 Übergabe beider Datensets
   }
@@ -329,6 +392,7 @@
         
         <button onclick="addExercise()">➕ Hinzufügen</button>
         <button onclick="deleteExercise()">🗑️ Löschen</button>
+        <button onclick="toggleLockStatus()" id="lockButton">🔒 Übung sperren</button>
         <button onclick="exportPDF()">📄 PDF exportieren</button>
         <button onclick="deleteOldFeedbacks()">🧹 Feedbacks >2 J. löschen</button>
       </div>
