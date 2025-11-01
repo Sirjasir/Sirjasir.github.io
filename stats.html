@@ -164,25 +164,50 @@ window.updateLockButtonText = updateLockButtonText;
         }
 }
 
-  // === Übung löschen ===
-  async function deleteExercise() {
-    const select = document.getElementById("exerciseFilter");
-    const selected = select.value;
-    if (!selected) return alert("Bitte eine Übung auswählen.");
-    if (!confirm(`Möchtest du "${selected}" wirklich löschen?`)) return;
-    try {
-      const qSnap = await getDocs(collection(db, "exercises"));
-      qSnap.forEach(async (d) => {
-        const data = d.data();
-        if (data.name === selected) {
-          await deleteDoc(doc(db, "exercises", d.id));
+    // === Übung und zugehörige Feedbacks löschen ===
+    async function deleteExercise() {
+        const select = document.getElementById("exerciseFilter");
+        const selected = select.value;
+        if (!selected) return alert("Bitte eine Übung auswählen.");
+        
+        if (!confirm(`Möchtest du "${selected}" WIRKLICH löschen? Dadurch werden auch ALLE ${selected} zugehörigen Feedbacks unwiederbringlich gelöscht!`)) return;
+        
+        try {
+            let deletedFeedbackCount = 0;
+            
+            // --- PHASE 1: Zugehörige Feedbacks löschen ---
+            const feedbacksRef = collection(db, "feedbacks");
+            // Finde alle Feedbacks, deren 'exercise' Feld mit der ausgewählten Übung übereinstimmt
+            const qFeedback = query(feedbacksRef, where("exercise", "==", selected));
+            const qSnapFeedback = await getDocs(qFeedback);
+            
+            if (qSnapFeedback.docs.length > 0) {
+                console.log(`[Löschen] Finde ${qSnapFeedback.docs.length} Feedbacks für "${selected}"...`);
+                
+                const deleteFeedbackPromises = qSnapFeedback.docs.map(d => deleteDoc(doc(db, "feedbacks", d.id)));
+                await Promise.all(deleteFeedbackPromises);
+                
+                deletedFeedbackCount = qSnapFeedback.docs.length;
+            }
+    
+            // --- PHASE 2: Übung selbst löschen ---
+            const exercisesRef = collection(db, "exercises");
+            const qSnapExercise = await getDocs(exercisesRef);
+            
+            qSnapExercise.forEach(async (d) => {
+                const data = d.data();
+                if (data.name === selected) {
+                    await deleteDoc(doc(db, "exercises", d.id));
+                }
+            });
+            
+            alert(`Übung "${selected}" und ${deletedFeedbackCount} zugehörige Feedbacks wurden gelöscht.`);
+            
+        } catch (e) {
+            console.error("Fehler beim Löschen:", e);
+            alert("Fehler beim Löschen der Übung oder der Feedbacks!");
         }
-      });
-      alert(`Übung "${selected}" wurde gelöscht.`);
-    } catch (e) {
-      console.error("Fehler beim Löschen:", e);
     }
-  }
 
   window.addExercise = addExercise;
   window.deleteExercise = deleteExercise;
