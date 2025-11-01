@@ -25,9 +25,16 @@
       const ref = collection(db, "exercises");
       onSnapshot(ref, (snapshot) => {
         const names = [];
+        window.lockedExercise = {};
+        
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
-          if (data?.name) names.push(data.name);
+          if (data?.name) {
+            names.push(data.name);
+            if (data.isLocked) {
+              window.lockedExercise[data.name] = true;
+            }
+          }
         });
 
         names.sort((a, b) => a.localeCompare(b, "de"));
@@ -45,9 +52,14 @@
             const opt = document.createElement("option");
             opt.value = n;
             opt.textContent = n;
+            if (window.lockedExercise[n] {
+                opt.textContext += " (Gesperrt)";
+            }
             select.appendChild(opt);
           });
+          
         }
+        checkLockStatus();
         console.log("[LiveSync] Übungen:", names);
       }, (err) => {
         console.error("[LiveSync] Fehler beim Laden der Übungen:", err);
@@ -60,12 +72,37 @@
 
     window.addEventListener("DOMContentLoaded", loadExercises);
 
+    function checkLockStatus() {
+        const exerciseSelect = document.getElementById('exercise');
+        const selectedExercise = exerciseSelect.value;
+        const isLocked = window.lockedExercises && window.lockedExercises[selectedExercise];
+        
+        // Deaktiviere alle Formular-Elemente und den Absenden-Button, wenn gesperrt
+        const ratingSelect = document.getElementById('rating');
+        const commentArea = document.getElementById('comment');
+        const submitButton = document.querySelector('button[onclick="saveFeedback()"]');
+        
+        ratingSelect.disabled = isLocked;
+        commentArea.disabled = isLocked;
+        submitButton.disabled = isLocked;
+        submitButton.textContent = isLocked ? 'Feedback gesperrt' : 'Absenden';
+        submitButton.style.backgroundColor = isLocked ? '#555' : '#b30000';
+        
+        // Füge einen Event-Listener hinzu, um bei Auswahlwechsel sofort zu prüfen
+        exerciseSelect.onchange = checkLockStatus;
+    }
+
     // === Feedback speichern ===
     async function saveFeedback() {
       const rating = document.getElementById('rating').value;
       const comment = document.getElementById('comment').value.trim();
       const exerciseSelect = document.getElementById('exercise');
       const exercise = exerciseSelect ? exerciseSelect.value : "";
+
+      if (window.lockedExercises && window.lockedExercises[exercise]) {
+          alert("Diese Übung wurde gesperrt und kann kein Feedback mehr annehmen.");
+          return;
+      }
 
       if (!exercise || exerciseSelect.disabled) {
         alert("Es ist keine Übung verfügbar. Bitte wende dich an den Administrator.");
