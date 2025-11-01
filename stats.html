@@ -143,45 +143,71 @@
   }
   window.applyFilter = applyFilter;
 
-  function updateChart(feedbacks) {
-    const counts = [0,0,0,0,0];
+  function updateChart(primaryFeedbacks, compareFeedbacks, selectedCompare) { // 🔥 Parameter hinzugefügt
+    
+    // --- 1. Primäres Dataset (Übung A) berechnen ---
+    const countsPrimary = [0,0,0,0,0];
     let total = 0;
-    feedbacks.forEach(f => {
+    primaryFeedbacks.forEach(f => {
       if (!f.rating) return;
-      counts[f.rating-1]++;
+      countsPrimary[f.rating-1]++;
       total += f.rating;
     });
 
-    const avg = feedbacks.length ? (total / feedbacks.length).toFixed(2) : "-";
+    const avg = primaryFeedbacks.length ? (total / primaryFeedbacks.length).toFixed(2) : "-";
     document.getElementById("avgRating").textContent = avg;
+    
+    
+    // --- 2. Vergleichs-Dataset (Übung B) berechnen ---
+    const datasets = [{
+        label: document.getElementById("exerciseFilter").value || 'Gesamt', // Label für Primär
+        data: countsPrimary,
+        backgroundColor: "#b30000" // Rot
+    }];
 
+    if (compareFeedbacks && selectedCompare) { // 🔥 Nur hinzufügen, wenn Vergleich gewählt
+        const countsCompare = [0,0,0,0,0];
+        compareFeedbacks.forEach(f => {
+            if (!f.rating) return;
+            countsCompare[f.rating-1]++;
+        });
+        
+        datasets.push({
+            label: selectedCompare, // Label für Vergleich
+            data: countsCompare,
+            backgroundColor: "#005a9c" // Blau (oder eine andere Kontrastfarbe)
+        });
+        
+        // Optional: Durchschnitt des Vergleichs in der Konsole loggen
+        const avgCompare = compareFeedbacks.length ? (compareFeedbacks.reduce((sum, f) => sum + f.rating, 0) / compareFeedbacks.length).toFixed(2) : "-";
+        console.log(`[Vergleich] ${selectedCompare} Durchschnitt: ${avgCompare}`);
+    }
+    
+    // --- 3. Diagramm rendern ---
     const ctx = document.getElementById("feedbackChart").getContext("2d");
     if (window.chartInstance) window.chartInstance.destroy();
     window.chartInstance = new Chart(ctx, {
       type: "bar",
       data: {
         labels: ["1","2","3","4","5"],
-        datasets: [{
-          label: "Bewertungen",
-          data: counts,
-          backgroundColor: "#b30000"
-        }]
+        datasets: datasets, // 🔥 Verwendung beider Datasets
       },
       options: { scales: { y: { beginAtZero: true } } }
     });
 
-    // Kommentare rendern
+    // --- 4. Kommentare rendern (bleibt bei der primären Übung) ---
     const list = document.getElementById("commentsList");
-    const currentEx = document.getElementById("exerciseFilter").value;
+    const currentEx = document.getElementById("exerciseFilter").value; 
     
-    if (feedbacks.length === 0) {
+    // ... (Kommentare Logik, bitte mit der Korrektur aus der letzten Antwort übernehmen) ...
+    if (primaryFeedbacks.length === 0) {
       list.innerHTML = "<li>Keine Rückmeldungen vorhanden.</li>";
     } else {
-      list.innerHTML = feedbacks
+      list.innerHTML = primaryFeedbacks
         .filter(f => f.comment)
         .map(f => {
-            const prefix = currentEx ? '' : `[${f.exercise || "-"}] `;
-            return`<li>${prefix}${f.comment}</li>`
+             const prefix = currentEx ? '' : `[${f.exercise || "–"}] `;
+             return `<li>${prefix}${f.comment}</li>`;
         })
         .join('');
     }
